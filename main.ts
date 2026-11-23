@@ -12,15 +12,21 @@
 // Run it the way the grader does:
 //   mkdir -p out && MAKEFUN_BOT_DIR=. MAKEFUN_OUTPUT_DIR=out node main.ts
 
-import { copyFileSync, mkdirSync } from 'node:fs';
+import { copyFileSync, mkdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const BOT_DIR = process.env.MAKEFUN_BOT_DIR ?? '/bot';
 const OUTPUT_DIR = process.env.MAKEFUN_OUTPUT_DIR ?? '/output';
 
 mkdirSync(OUTPUT_DIR, { recursive: true });
+const source = join(BOT_DIR, 'VIDEO.json');
 try {
-  copyFileSync(join(BOT_DIR, 'VIDEO.json'), join(OUTPUT_DIR, 'VIDEO.json'));
+  // Fail loudly on a malformed VIDEO.json instead of copying a broken file.
+  const parsed = JSON.parse(readFileSync(source, 'utf-8'));
+  if (typeof parsed !== 'object' || parsed === null || typeof parsed.url !== 'string') {
+    throw new Error('VIDEO.json must be a JSON object with a string "url"');
+  }
+  copyFileSync(source, join(OUTPUT_DIR, 'VIDEO.json'));
 } catch (err) {
   console.error(`VIDEO.json could not be copied from ${BOT_DIR}: ${(err as Error).message}`);
   process.exit(1);
